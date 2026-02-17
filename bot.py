@@ -1,11 +1,6 @@
 # bot.py
 import os
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    LabeledPrice,
-)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -17,7 +12,7 @@ from telegram.ext import (
 )
 
 # ===== ENV =====
-BOT_TOKEN = os.getenv("8520547535:AAHeirjxbLZ3GiQqA_ksKIvoJ-RmxZtuA0w")  # Railway Variables -> BOT_TOKEN
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # имя переменной
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set. Add it in Railway -> Variables.")
 
@@ -34,19 +29,16 @@ WELCOME_TEXT = (
     "🔒 Доступ после оплаты"
 )
 
-ADMIN_IDS = [1195876661, 5083187149]   # твои админы (user_id)
-PRICE_STARS = 100                      # сколько звёзд
+ADMIN_IDS = [1195876661, 5083187149]   # админы (user_id)
+PRICE_STARS = 100                      # звёзды
 
-# ===== UI =====
 def keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("⭐ Вход за 100 звёзд", callback_data="buy_stars")],
         [InlineKeyboardButton("❓ Тех.поддержка", callback_data="support_start")],
     ])
 
-# ===== COMMANDS =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # /start всегда шлёт картинку+текст+кнопки
     if update.message is None:
         return
 
@@ -71,27 +63,22 @@ async def on_buy_stars(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await q.answer()
 
-    # Важно:
-    # - currency="XTR"
-    # - provider_token="" (пусто для Stars)
-    # - prices: ровно 1 пункт
     prices = [LabeledPrice(label="Доступ к турниру", amount=PRICE_STARS)]
 
     await q.message.reply_invoice(
         title="Доступ к турниру",
         description="Оплата 100 звёзд за доступ.",
         payload="access_100_stars",
-        provider_token="",
-        currency="XTR",
-        prices=prices,
+        provider_token="",      # Stars: пусто
+        currency="XTR",         # Stars: XTR
+        prices=prices,          # ровно 1 пункт
     )
 
 async def precheckout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Без этого платеж не завершится
+    # без этого платеж не пройдет
     await update.pre_checkout_query.answer(ok=True)
 
 async def successful_payment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Успешная оплата
     context.user_data["paid_access"] = True
 
     user = update.effective_user
@@ -99,7 +86,6 @@ async def successful_payment_handler(update: Update, context: ContextTypes.DEFAU
 
     await update.message.reply_text("✅ Оплата прошла! Доступ выдан.")
 
-    # Нотификация админам
     admin_text = (
         "💸 NEW PAYMENT\n"
         f"👤 {user.full_name}\n"
@@ -148,7 +134,6 @@ async def on_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"Can't send to admin {admin_id}: {e}")
 
-# ===== RUN =====
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
@@ -161,7 +146,8 @@ def main():
     app.add_handler(CallbackQueryHandler(on_support_start, pattern="^support_start$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_user_text))
 
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # важно: при старте убираем старые апдейты, чтобы /start не тупил
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
