@@ -17,7 +17,7 @@ from telegram.ext import (
 )
 
 # ===== ENV =====
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Railway Variables -> BOT_TOKEN
+BOT_TOKEN = os.getenv("8520547535:AAHeirjxbLZ3GiQqA_ksKIvoJ-RmxZtuA0w")  # Railway Variables -> BOT_TOKEN
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set. Add it in Railway -> Variables.")
 
@@ -122,7 +122,7 @@ async def on_support_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     context.user_data["waiting_support_message"] = True
-    await q.message.reply_text("🛟 Напиши одним сообщением, что нужно — отправлю админам.")
+    await q.message.reply_text("✉️ Напишите ваш вопрос в одном сообщении:git add bot.py")
 
 async def on_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("waiting_support_message"):
