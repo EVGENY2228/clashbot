@@ -1,3 +1,5 @@
+# bot.py
+import os
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -14,12 +16,16 @@ from telegram.ext import (
     filters,
 )
 
-BOT_TOKEN = "8520547535:AAHeirjxbLZ3GiQqA_ksKIvoJ-RmxZtuA0w"
+# ===== ENV =====
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # Railway Variables -> BOT_TOKEN
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set. Add it in Railway -> Variables.")
 
-# Картинка должна быть <= 10MB и реально называться как в коде.
-# У тебя было welcome.jpg.jpg — лучше переименуй в welcome.jpg
-WELCOME_IMAGE_PATH = "welcome.jpg"
+# ===== FILES =====
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WELCOME_IMAGE_PATH = os.path.join(BASE_DIR, "welcome.jpg")
 
+# ===== TEXT / SETTINGS =====
 WELCOME_TEXT = (
     "👑 PRIVATE ARENA\n\n"
     "Закрытый турнир по Clash Royale.\n\n"
@@ -28,18 +34,29 @@ WELCOME_TEXT = (
     "🔒 Доступ после оплаты"
 )
 
-ADMIN_IDS = [1195876661, 5083187149]  # ваши user_id (админы)
+ADMIN_IDS = [1195876661, 5083187149]   # твои админы (user_id)
+PRICE_STARS = 100                      # сколько звёзд
 
-PRICE_STARS = 100  # сколько звёзд
-
+# ===== UI =====
 def keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⭐ Вход за 100 звёзд", callback_data="buy_fake")],
-        [InlineKeyboardButton("❓ Тех.поддержка", callback_data="support_start")]
+        [InlineKeyboardButton("⭐ Вход за 100 звёзд", callback_data="buy_stars")],
+        [InlineKeyboardButton("❓ Тех.поддержка", callback_data="support_start")],
     ])
 
+# ===== COMMANDS =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Каждый раз /start будет заново слать картинку+текст+кнопки
+    # /start всегда шлёт картинку+текст+кнопки
+    if update.message is None:
+        return
+
+    if not os.path.exists(WELCOME_IMAGE_PATH):
+        await update.message.reply_text(
+            "⚠️ Не нашёл welcome.jpg в корне проекта.\n"
+            "Проверь название файла и что он задеплоен."
+        )
+        return
+
     with open(WELCOME_IMAGE_PATH, "rb") as f:
         await update.message.reply_photo(
             photo=f,
@@ -47,37 +64,42 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=keyboard()
         )
 
-# ========== ПОКУПКА ЗВЁЗДАМИ ==========
+# ===== STARS PAYMENT =====
 async def on_buy_stars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
 
-    # Инвойс (Stars)
-    # currency="XTR", provider_token="" и prices = ровно 1 пункт. :contentReference[oaicite:1]{index=1}
+    # Важно:
+    # - currency="XTR"
+    # - provider_token="" (пусто для Stars)
+    # - prices: ровно 1 пункт
     prices = [LabeledPrice(label="Доступ к турниру", amount=PRICE_STARS)]
 
     await q.message.reply_invoice(
         title="Доступ к турниру",
         description="Оплата 100 звёзд за доступ.",
-        payload="access_100_stars",      # любая строка для твоей логики
-        provider_token="",              # для Stars пусто :contentReference[oaicite:2]{index=2}
-        currency="XTR",                 # Telegram Stars :contentReference[oaicite:3]{index=3}
-        prices=prices,                  # 1 пункт :contentReference[oaicite:4]{index=4}
+        payload="access_100_stars",
+        provider_token="",
+        currency="XTR",
+        prices=prices,
     )
 
 async def precheckout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Без этого оплата не пройдёт
+    # Без этого платеж не завершится
     await update.pre_checkout_query.answer(ok=True)
 
 async def successful_payment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    sp = update.message.successful_payment
-    # тут ты “выдаёшь доступ”
+    # Успешная оплата
     context.user_data["paid_access"] = True
+
+    user = update.effective_user
+    sp = update.message.successful_payment
 
     await update.message.reply_text("✅ Оплата прошла! Доступ выдан.")
 
-    # (опционально) уведомить админов
-    user = update.effective_user
+    # Нотификация админам
     admin_text = (
         "💸 NEW PAYMENT\n"
         f"👤 {user.full_name}\n"
@@ -92,12 +114,15 @@ async def successful_payment_handler(update: Update, context: ContextTypes.DEFAU
         except Exception as e:
             print(f"Can't send to admin {admin_id}: {e}")
 
-# ========== ТЕХПОДДЕРЖКА (ваш текущий флоу) ==========
+# ===== SUPPORT FLOW =====
 async def on_support_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
+
     context.user_data["waiting_support_message"] = True
-    await q.message.reply_text("🛟 Напиши сюда одним сообщением, что нужно. Я отправлю админам.")
+    await q.message.reply_text("🛟 Напиши одним сообщением, что нужно — отправлю админам.")
 
 async def on_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("waiting_support_message"):
@@ -117,13 +142,13 @@ async def on_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"@{user.username if user.username else 'no_username'}\n\n"
         f"💬 {text}"
     )
-
     for admin_id in ADMIN_IDS:
         try:
             await context.bot.send_message(chat_id=admin_id, text=admin_text)
         except Exception as e:
             print(f"Can't send to admin {admin_id}: {e}")
 
+# ===== RUN =====
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
@@ -136,7 +161,7 @@ def main():
     app.add_handler(CallbackQueryHandler(on_support_start, pattern="^support_start$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_user_text))
 
-    app.run_polling()
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
     main()
