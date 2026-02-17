@@ -122,7 +122,7 @@ async def on_support_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
 
     context.user_data["waiting_support_message"] = True
-    await q.message.reply_text("✉️ Напишите ваш вопрос в одном сообщении:git add bot.py")
+    await q.message.reply_text("✉️ Напишите ваш вопрос в одном сообщении:")
 
 async def on_user_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get("waiting_support_message"):
