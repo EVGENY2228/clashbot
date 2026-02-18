@@ -74,8 +74,13 @@ async def bit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["waiting_bit_screenshot"] = True
     await q.message.reply_text(
-        "📸 Пришли скрин перевода в Bit одним фото.\n"
-        "После проверки я дам доступ."
+        "🎟 Участие в турнире — 10 ₪\n\n"
+        "1️⃣ Переведи 10 ₪ через Bit\n"
+        "2️⃣ В комментарии к переводу укажи свой Telegram @username\n"
+        "3️⃣ Пришли сюда скрин одним фото\n\n"
+        "После проверки откроем доступ.\n\n"
+        "⏳ Платёж на проверке.\n"
+        "Обычно до 10–15 минут."
     )
 
 async def on_user_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -149,10 +154,13 @@ async def bit_admin_decision(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     elif action == "bit_reject":
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text="❌ Не смог подтвердить оплату. Пришли скрин ещё раз или напиши в поддержку."
-            )
+            await update.message.reply_text(
+                "❌ Платёж не удалось подтвердить.\n\n"
+                "Проверь, пожалуйста, скрин:\n"
+                "— видно ли сумму 10 ₪\n"
+                "— виден ли комментарий с твоим @username\n\n"
+                "Пришли фото ещё раз или напиши в поддержку."
+            )git add .
         except Exception as e:
             print("Can't message user:", e)
 
