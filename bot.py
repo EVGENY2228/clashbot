@@ -160,7 +160,7 @@ async def bit_admin_decision(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "— видно ли сумму 10 ₪\n"
                 "— виден ли комментарий с твоим @username\n\n"
                 "Пришли фото ещё раз или напиши в поддержку."
-            )git add .
+
         except Exception as e:
             print("Can't message user:", e)
 
