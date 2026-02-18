@@ -27,7 +27,7 @@ ADMIN_IDS = [1195876661, 5083187149]  # твои админы (user_id)
 PRIVATE_CHANNEL_ID = -1003884265273
 
 # Сколько действует ссылка после approve (минут)
-INVITE_EXPIRE_MINUTES = 60
+INVITE_EXPIRE_MINUTES = 3
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WELCOME_IMAGE_PATH = os.path.join(BASE_DIR, "welcome.jpg")
